@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Qyzmet — Жұмыс іздеу</title>
+
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#f5f7fb;color:#172033}
@@ -20,7 +21,8 @@ button{cursor:pointer;border:none;border-radius:8px;padding:13px 20px;font-size:
 .search-btn,.apply-btn{background:#4f46e5;color:#fff}
 .search-btn:hover,.apply-btn:hover{background:#3730a3}
 .stats{display:flex;justify-content:center;gap:40px;margin-top:26px;flex-wrap:wrap}
-.stats b{display:block;font-size:24px}.stats span{font-size:13px;color:#ddd6fe}
+.stats b{display:block;font-size:24px}
+.stats span{font-size:13px;color:#ddd6fe}
 main{max-width:1150px;margin:35px auto;padding:0 20px;display:grid;grid-template-columns:250px 1fr;gap:24px}
 aside{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px;align-self:start;position:sticky;top:80px}
 aside h3{margin-bottom:14px}
@@ -60,324 +62,1800 @@ footer{background:#172033;color:#d1d5db;text-align:center;padding:30px 20px;marg
 .row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f0f1f5;font-size:14px}
 .row span:first-child{color:#6b7280}
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#172033;color:#fff;padding:12px 20px;border-radius:8px;display:none;z-index:20}
-@media(max-width:850px){main{grid-template-columns:1fr}aside{position:static}.jobs{grid-template-columns:1fr}.hero h1{font-size:28px}.search-box{flex-direction:column}}
+
+/* Аккаунт пользователя */
+.auth-nav{display:flex;align-items:center;gap:10px;margin-left:20px}
+.auth-nav button{padding:10px 14px}
+.login-btn{background:#f3f4f6;color:#374151}
+.register-btn{background:#4f46e5;color:#fff}
+.account-btn{background:#eef2ff;color:#4338ca}
+.account-section{display:none;max-width:900px;margin:35px auto;padding:0 20px}
+.account-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:25px}
+.account-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.account-grid label,.profile-form label{display:block;font-size:13px;color:#6b7280;margin:10px 0 5px}
+.account-grid input,.profile-form input,.profile-form textarea,.profile-form select{width:100%}
+.profile-form textarea{min-height:100px;padding:13px;border:1px solid #e5e7eb;border-radius:8px;font:14px Arial;resize:vertical}
+.account-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.primary-btn{background:#4f46e5;color:white}
+.logout-btn{background:#f3f4f6;color:#374151}
+.profile-summary{background:#f8faff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin:16px 0}
+.profile-summary p{margin:7px 0;color:#4b5563;line-height:1.5;overflow-wrap:anywhere}
+.auth-switch{color:#4f46e5;cursor:pointer;text-decoration:underline;margin-top:14px;display:inline-block}
+
+@media(max-width:650px){
+header{align-items:flex-start;gap:12px;flex-wrap:wrap}
+header nav{display:flex;flex-wrap:wrap;gap:10px}
+header a{margin-left:0}
+.auth-nav{margin-left:0}
+.account-grid{grid-template-columns:1fr}
+}
+
+@media(max-width:850px){
+main{grid-template-columns:1fr}
+aside{position:static}
+.jobs{grid-template-columns:1fr}
+.hero h1{font-size:28px}
+.search-box{flex-direction:column}
+}
 </style>
 </head>
+
 <body>
 
+<!-- ШАПКА САЙТА -->
 <header>
-  <div class="logo">Qyzmet.</div>
-  <nav>
-    <a href="#jobs">Бос жұмыс орындары</a>
-    <a onclick="toggleFavOnly()">♥ Таңдаулылар (<span id="favCount">0</span>)</a>
-    <a href="#about">Жоба туралы</a>
-  </nav>
+
+    <div class="logo">Qyzmet.</div>
+
+    <nav>
+        <a href="#jobs" onclick="showJobsPage()">Бос жұмыс орындары</a>
+
+        <a onclick="toggleFavOnly()">
+            ♥ Таңдаулылар (<span id="favCount">0</span>)
+        </a>
+
+        <a href="#about" onclick="showJobsPage()">Жоба туралы</a>
+    </nav>
+
+    <div class="auth-nav" id="authNav">
+
+        <button class="login-btn" onclick="openAuth('login')">
+            Кіру
+        </button>
+
+        <button class="register-btn" onclick="openAuth('register')">
+            Тіркелу
+        </button>
+
+    </div>
+
 </header>
 
+
+<!-- БАСТЫ БЕТ -->
 <section class="hero">
-  <h1>Арман жұмысыңды тап</h1>
-  <p>Дағдың мен мақсатыңа сай бос жұмыс орындары</p>
-  <div class="search-box">
-    <input id="search" type="text" placeholder="Мамандық, дағды немесе компания">
-    <select id="city"><option value="">Барлық қалалар</option></select>
-    <input id="minSalary" type="number" placeholder="Ең төмен жалақы ₸" min="0">
-    <button class="search-btn" onclick="resetPage()">Іздеу</button>
-  </div>
-  <div class="stats">
-    <div><b id="stJobs">0</b><span>бос орын</span></div>
-    <div><b id="stCities">0</b><span>қала</span></div>
-    <div><b id="stAvg">0</b><span>орташа жалақы ₸</span></div>
-  </div>
-</section>
 
-<main id="jobs">
-  <aside>
-    <h3>Сүзгілер</h3>
-    <label>Сала</label><select id="category"><option value="">Барлық салалар</option></select>
-    <label>Жұмыспен қамту түрі</label><select id="type"><option value="">Кез келген</option></select>
-    <label>Жұмыс тәжірибесі</label>
-    <select id="exp">
-      <option value="">Кез келген</option>
-      <option value="0">Тәжірибесіз</option>
-      <option value="1">1 жылға дейін</option>
-      <option value="2">2 жылға дейін</option>
-      <option value="3">3 жыл және одан артық</option>
-    </select>
-    <label>Жалақы дейін, ₸</label><input id="maxSalary" type="number" min="0" placeholder="Шектеусіз">
-    <label>Жарияланған уақыты</label>
-    <select id="period">
-      <option value="">Барлық уақыт</option>
-      <option value="1">Тәулік ішінде</option>
-      <option value="7">Апта ішінде</option>
-      <option value="30">Ай ішінде</option>
-    </select>
-    <label class="check"><input type="checkbox" id="favOnly"> Тек таңдаулылар</label>
-    <button class="reset-btn" onclick="resetFilters()">Сүзгілерді тазалау</button>
-  </aside>
+    <h1>Арман жұмысыңды тап</h1>
 
-  <section>
-    <div class="section-title">
-      <h2>Өзекті бос жұмыс орындары</h2>
-      <div class="sort">
-        <label for="sort">Сұрыптау:</label>
-        <select id="sort">
-          <option value="new">Алдымен жаңалары</option>
-          <option value="salDesc">Жалақы: кему бойынша</option>
-          <option value="salAsc">Жалақы: өсу бойынша</option>
-          <option value="expAsc">Тәжірибе: азынан көбіне</option>
-          <option value="expDesc">Тәжірибе: көбінен азына</option>
-          <option value="title">Атауы бойынша (А–Я)</option>
+    <p>Дағдың мен мақсатыңа сай бос жұмыс орындары</p>
+
+    <div class="search-box">
+
+        <input id="search" type="text"
+        placeholder="Мамандық, дағды немесе компания">
+
+        <select id="city">
+            <option value="">Барлық қалалар</option>
         </select>
-      </div>
-    </div>
-    <div id="resultCount"></div>
-    <div class="jobs" id="jobList"></div>
-    <button class="more" id="moreBtn" onclick="showMore()">Тағы көрсету</button>
-  </section>
-</main>
 
-<section id="about" style="text-align:center;padding:20px;">
-  <h2>Qyzmet платформасы туралы</h2>
-  <p style="margin:15px;color:#6b7280;line-height:1.7;">
-    Qyzmet — бос жұмыс орындарын іздеуге арналған оқу жобасы. Мұнда жұмыс берушілердің ұсыныстарын қарауға,
-    вакансияларды сүзуге және сұрыптауға, таңдаулыларды сақтауға және сынақ өтініштерін жіберуге болады.
-  </p>
+        <input id="minSalary" type="number"
+        placeholder="Ең төмен жалақы ₸" min="0">
+
+        <button class="search-btn" onclick="resetPage()">
+            Іздеу
+        </button>
+
+    </div>
+
+    <div class="stats">
+
+        <div>
+            <b id="stJobs">0</b>
+            <span>бос орын</span>
+        </div>
+
+        <div>
+            <b id="stCities">0</b>
+            <span>қала</span>
+        </div>
+
+        <div>
+            <b id="stAvg">0</b>
+            <span>орташа жалақы ₸</span>
+        </div>
+
+    </div>
+
 </section>
 
+
+<!-- ВАКАНСИЯЛАР -->
+<main id="jobs">
+
+    <aside>
+
+        <h3>Сүзгілер</h3>
+
+        <label>Сала</label>
+        <select id="category">
+            <option value="">Барлық салалар</option>
+        </select>
+
+        <label>Жұмыспен қамту түрі</label>
+        <select id="type">
+            <option value="">Кез келген</option>
+        </select>
+
+        <label>Жұмыс тәжірибесі</label>
+
+        <select id="exp">
+            <option value="">Кез келген</option>
+            <option value="0">Тәжірибесіз</option>
+            <option value="1">1 жылға дейін</option>
+            <option value="2">2 жылға дейін</option>
+            <option value="3">3 жыл және одан артық</option>
+        </select>
+
+        <label>Жалақы дейін, ₸</label>
+
+        <input id="maxSalary" type="number"
+        min="0" placeholder="Шектеусіз">
+
+        <label>Жарияланған уақыты</label>
+
+        <select id="period">
+            <option value="">Барлық уақыт</option>
+            <option value="1">Тәулік ішінде</option>
+            <option value="7">Апта ішінде</option>
+            <option value="30">Ай ішінде</option>
+        </select>
+
+        <label class="check">
+            <input type="checkbox" id="favOnly">
+            Тек таңдаулылар
+        </label>
+
+        <button class="reset-btn" onclick="resetFilters()">
+            Сүзгілерді тазалау
+        </button>
+
+    </aside>
+
+
+    <section>
+
+        <div class="section-title">
+
+            <h2>Өзекті бос жұмыс орындары</h2>
+
+            <div class="sort">
+
+                <label for="sort">Сұрыптау:</label>
+
+                <select id="sort">
+                    <option value="new">Алдымен жаңалары</option>
+                    <option value="salDesc">Жалақы: кему бойынша</option>
+                    <option value="salAsc">Жалақы: өсу бойынша</option>
+                    <option value="expAsc">Тәжірибе: азынан көбіне</option>
+                    <option value="expDesc">Тәжірибе: көбінен азына</option>
+                    <option value="title">Атауы бойынша (А–Я)</option>
+                </select>
+
+            </div>
+
+        </div>
+
+        <div id="resultCount"></div>
+
+        <div class="jobs" id="jobList"></div>
+
+        <button class="more" id="moreBtn" onclick="showMore()">
+            Тағы көрсету
+        </button>
+
+    </section>
+
+</main> 
+  <!-- ЛИЧНЫЙ КАБИНЕТ -->
+<section id="accountPage" class="account-section">
+
+    <div class="account-card">
+
+        <div class="section-title">
+
+            <h2>Менің аккаунтым</h2>
+
+            <button class="logout-btn" onclick="logout()">
+                Шығу
+            </button>
+
+        </div>
+
+        <p style="color:#6b7280">
+            Жеке мәліметтеріңізді толтырып, резюмеңізді сақтай аласыз.
+        </p>
+
+        <div id="profileSummary" class="profile-summary"></div>
+
+        <form id="profileForm" class="profile-form">
+
+            <div class="account-grid">
+
+                <div>
+                    <label for="profileName">Аты-жөні</label>
+                    <input id="profileName" required
+                    placeholder="Атыңызды енгізіңіз">
+                </div>
+
+                <div>
+                    <label for="profileAge">Жасы</label>
+                    <input id="profileAge" type="number"
+                    min="14" max="100" placeholder="Мысалы, 20">
+                </div>
+
+                <div>
+                    <label for="profileCity">Қала</label>
+                    <input id="profileCity" placeholder="Мысалы, Астана">
+                </div>
+
+                <div>
+                    <label for="profilePhone">Телефон</label>
+                    <input id="profilePhone" type="tel" placeholder="+7 ...">
+                </div>
+
+                <div>
+                    <label for="profileEducation">Білімі</label>
+                    <input id="profileEducation"
+                    placeholder="Оқу орны, мамандық">
+                </div>
+
+                <div>
+                    <label for="profileExperience">Жұмыс тәжірибесі</label>
+                    <input id="profileExperience"
+                    placeholder="Мысалы, 1 жыл">
+                </div>
+
+                <div>
+                    <label for="profileSkills">Дағдылар</label>
+                    <input id="profileSkills"
+                    placeholder="Python, SQL, Excel...">
+                </div>
+
+                <div>
+                    <label for="profileLinkedin">LinkedIn немесе портфолио</label>
+                    <input id="profileLinkedin" type="url"
+                    placeholder="https://...">
+                </div>
+
+            </div>
+
+            <label for="profileAbout">Өзіңіз туралы</label>
+
+            <textarea id="profileAbout"
+            placeholder="Қысқаша өзіңіз, мақсатыңыз және қабілеттеріңіз туралы жазыңыз"></textarea>
+
+            <label for="profileResume">Резюме мәтіні</label>
+
+            <textarea id="profileResume"
+            placeholder="Біліміңіз, тәжірибеңіз, жобаларыңыз және жетістіктеріңіз туралы толық ақпарат"></textarea>
+
+            <div class="account-actions">
+
+                <button class="primary-btn" type="submit">
+                    Ақпаратты сақтау
+                </button>
+
+                <button class="logout-btn" type="button"
+                onclick="showJobsPage()">
+                    Вакансияларға оралу
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</section>
+
+
+<!-- ЖОБА ТУРАЛЫ -->
+<section id="about" style="text-align:center;padding:20px;">
+
+    <h2>Qyzmet платформасы туралы</h2>
+
+    <p style="margin:15px;color:#6b7280;line-height:1.7;">
+
+        Qyzmet — бос жұмыс орындарын іздеуге арналған оқу жобасы.
+        Мұнда жұмыс берушілердің ұсыныстарын қарауға,
+        вакансияларды сүзуге және сұрыптауға, таңдаулыларды сақтауға,
+        сынақ өтініштерін жіберуге және жеке аккаунтта резюме
+        мәліметтерін толтыруға болады.
+
+    </p>
+
+</section>
+
+
+<!-- FOOTER -->
 <footer>
-  <h3>Qyzmet.</h3>
-  <p>Жұмыс іздеу платформасы</p>
-  <p>«Деректер қоры» пәні бойынша оқу жобасы</p>
-  <p>© 2026 Qyzmet</p>
+
+    <h3>Qyzmet.</h3>
+
+    <p>Жұмыс іздеу платформасы</p>
+
+    <p>«Деректер қоры» пәні бойынша оқу жобасы</p>
+
+    <p>© 2026 Qyzmet</p>
+
 </footer>
 
-<!-- Отклик -->
+
+<!-- ВАКАНСИЯҒА ӨТІНІШ -->
 <div id="modal" class="modal">
-  <div class="modal-content">
-    <h2>Вакансияға өтініш</h2>
-    <p id="modalJob" style="color:#6b7280;margin-bottom:12px;"></p>
-    <form id="applyForm">
-      <label for="appName">Атыңыз</label>
-      <input id="appName" required placeholder="Атыңызды енгізіңіз">
-      <label for="appEmail">Электрондық пошта</label>
-      <input id="appEmail" type="email" required placeholder="example@mail.kz">
-      <label for="appText">Ілеспе хат</label>
-      <input id="appText" placeholder="Өзіңіз туралы қысқаша (міндетті емес)">
-      <button type="submit" class="apply-btn">Өтініш жіберу</button>
-      <button type="button" class="cancel-btn" onclick="closeModals()">Бас тарту</button>
-    </form>
-  </div>
+
+    <div class="modal-content">
+
+        <h2>Вакансияға өтініш</h2>
+
+        <p id="modalJob"
+        style="color:#6b7280;margin-bottom:12px;"></p>
+
+        <form id="applyForm">
+
+            <label for="appName">Атыңыз</label>
+
+            <input id="appName" required
+            placeholder="Атыңызды енгізіңіз">
+
+            <label for="appEmail">Электрондық пошта</label>
+
+            <input id="appEmail" type="email" required
+            placeholder="example@mail.kz">
+
+            <label for="appText">Ілеспе хат</label>
+
+            <input id="appText"
+            placeholder="Өзіңіз туралы қысқаша (міндетті емес)">
+
+            <button type="submit" class="apply-btn">
+                Өтініш жіберу
+            </button>
+
+            <button type="button" class="cancel-btn"
+            onclick="closeModals()">
+                Бас тарту
+            </button>
+
+        </form>
+
+    </div>
+
 </div>
 
-<!-- Подробности -->
+
+<!-- ВАКАНСИЯ ТУРАЛЫ ТОЛЫҚ АҚПАРАТ -->
 <div id="detailModal" class="modal">
-  <div class="modal-content">
-    <div id="detailBody"></div>
-    <div class="job-actions" style="margin-top:18px">
-      <button class="apply-btn" id="detailApply">Өтініш беру</button>
-      <button class="cancel-btn" style="margin:0" onclick="closeModals()">Жабу</button>
+
+    <div class="modal-content">
+
+        <div id="detailBody"></div>
+
+        <div class="job-actions" style="margin-top:18px">
+
+            <button class="apply-btn" id="detailApply">
+                Өтініш беру
+            </button>
+
+            <button class="cancel-btn" style="margin:0"
+            onclick="closeModals()">
+                Жабу
+            </button>
+
+        </div>
+
     </div>
-  </div>
+
 </div>
+
+
+<!-- ТІРКЕЛУ ЖӘНЕ КІРУ -->
+<div id="authModal" class="modal">
+
+    <div class="modal-content">
+
+        <h2 id="authTitle">Аккаунтқа кіру</h2>
+
+        <form id="authForm">
+
+            <div id="registerNameWrap" style="display:none">
+
+                <label for="registerName">Аты-жөні</label>
+
+                <input id="registerName"
+                placeholder="Атыңызды енгізіңіз">
+
+            </div>
+
+            <label for="authEmail">Электрондық пошта</label>
+
+            <input id="authEmail" type="email" required
+            placeholder="example@mail.kz">
+
+            <label for="authPassword">Құпиясөз</label>
+
+            <input id="authPassword" type="password"
+            required minlength="6"
+            placeholder="Кемінде 6 таңба">
+
+            <button type="submit" class="apply-btn" id="authSubmit">
+                Кіру
+            </button>
+
+            <button type="button" class="cancel-btn"
+            onclick="closeModals()">
+                Жабу
+            </button>
+
+        </form>
+
+        <span class="auth-switch" id="authSwitch"
+        onclick="switchAuthMode()">
+            Аккаунтыңыз жоқ па? Тіркелу
+        </span>
+
+        <p style="font-size:12px;color:#9ca3af;margin-top:14px;line-height:1.5">
+            Оқу нұсқасы: аккаунт деректері осы браузерде сақталады.
+        </p>
+
+    </div>
+
+</div>
+
 
 <div id="toast"></div>
 
+
 <script>
-// Данные для демонстрации сайта (days — сколько дней назад опубликовано)
+
+// ========================================
+// 1. ВАКАНСИЯЛАР ТУРАЛЫ МӘЛІМЕТТЕР
+// ========================================
+
 const vacancies = [
- {id:1,title:"Python Developer",company:"Astana IT Solutions",city:"Астана",salary:450000,experience:1,category:"Бағдарламалау",type:"Толық жұмыс күні",days:1,skills:["Python","Django","SQL"],description:"Python тілінде бағдарламалар әзірлеу."},
- {id:2,title:"Data Analyst",company:"Digital Kazakhstan",city:"Алматы",salary:400000,experience:1,category:"Талдау",type:"Толық жұмыс күні",days:2,skills:["SQL","Excel","Power BI"],description:"Деректерді талдау және есептер дайындау."},
- {id:3,title:"Data Scientist",company:"FinTech Group",city:"Астана",salary:600000,experience:2,category:"Жасанды интеллект",type:"Толық жұмыс күні",days:3,skills:["Python","Pandas","ML"],description:"Деректермен және машиналық оқыту модельдерімен жұмыс."},
- {id:4,title:"Junior SQL Developer",company:"Smart Education",city:"Қарағанды",salary:300000,experience:0,category:"Деректер қоры",type:"Тағылымдама",days:5,skills:["SQL","PostgreSQL"],description:"SQL сұраныстарын жазу және деректер қорымен жұмыс."},
- {id:5,title:"Web Developer",company:"TechnoPark",city:"Шымкент",salary:380000,experience:1,category:"Веб-әзірлеу",type:"Толық жұмыс күні",days:6,skills:["HTML","CSS","JavaScript"],description:"Веб-сайттарды әзірлеу және қолдау."},
- {id:6,title:"Machine Learning Engineer",company:"DataLab",city:"Алматы",salary:650000,experience:2,category:"Жасанды интеллект",type:"Қашықтан",days:4,skills:["PyTorch","Python","MLOps"],description:"Машиналық оқыту модельдерін жасау."},
- {id:7,title:"AI Engineer",company:"AI Future",city:"Астана",salary:700000,experience:3,category:"Жасанды интеллект",type:"Толық жұмыс күні",days:8,skills:["LLM","Python","API"],description:"Жасанды интеллект негізінде шешімдер әзірлеу."},
- {id:8,title:"Database Administrator",company:"Web Solutions",city:"Қарағанды",salary:420000,experience:2,category:"Деректер қоры",type:"Толық жұмыс күні",days:10,skills:["PostgreSQL","Backup","Linux"],description:"Деректер қорын басқару және қызмет көрсету."},
- {id:9,title:"Financial Analyst",company:"Smart Finance",city:"Алматы",salary:500000,experience:1,category:"Қаржы",type:"Толық жұмыс күні",days:12,skills:["Excel","Қаржылық талдау"],description:"Қаржылық көрсеткіштерді талдау."},
- {id:10,title:"IT Support Specialist",company:"EduTech KZ",city:"Шымкент",salary:280000,experience:0,category:"IT-қолдау",type:"Ауысымдық кесте",days:15,skills:["Windows","Желілер"],description:"Пайдаланушыларға техникалық қолдау көрсету."},
- {id:11,title:"Frontend Developer",company:"Nomad Soft",city:"Астана",salary:520000,experience:2,category:"Веб-әзірлеу",type:"Қашықтан",days:1,skills:["React","TypeScript","CSS"],description:"Веб-қосымшалардың интерфейстерін жасау."},
- {id:12,title:"QA Engineer",company:"Qazaq Tech",city:"Алматы",salary:350000,experience:1,category:"Тестілеу",type:"Толық жұмыс күні",days:7,skills:["Тест-кейстер","Postman"],description:"Веб және мобильді қосымшаларды тестілеу."},
- {id:13,title:"UX/UI Designer",company:"Creative Hub",city:"Астана",salary:430000,experience:1,category:"Дизайн",type:"Жартылай жұмыс күні",days:9,skills:["Figma","Прототиптер"],description:"Интерфейстер мен прототиптерді жобалау."},
- {id:14,title:"Бухгалтер",company:"Alem Trade",city:"Шымкент",salary:260000,experience:2,category:"Қаржы",type:"Толық жұмыс күні",days:20,skills:["1С","Салықтар"],description:"Бухгалтерлік және салықтық есепті жүргізу."},
- {id:15,title:"Сату менеджері",company:"Steppe Group",city:"Қарағанды",salary:320000,experience:0,category:"Сату",type:"Ауысымдық кесте",days:2,skills:["Келіссөздер","CRM"],description:"Клиенттермен жұмыс және мәмілелер жасау."},
- {id:16,title:"Информатика мұғалімі",company:"Bilim School",city:"Астана",salary:290000,experience:0,category:"Білім беру",type:"Жартылай жұмыс күні",days:25,skills:["Информатика","Педагогика"],description:"Информатика сабақтарын өткізу."},
- {id:17,title:"Cybersecurity Specialist",company:"SafeNet KZ",city:"Астана",salary:800000,experience:3,category:"Ақпараттық қауіпсіздік",type:"Толық жұмыс күні",days:3,skills:["SIEM","Pentest","Linux"],description:"Инфрақұрылымды қорғау және инциденттерді бақылау."},
- {id:18,title:"Контент-менеджер",company:"Media Qazaq",city:"Алматы",salary:240000,experience:0,category:"Маркетинг",type:"Қашықтан",days:11,skills:["SMM","Копирайтинг"],description:"Әлеуметтік желілерді жүргізу және контент дайындау."}
+
+    {
+        id:1,
+        title:"Python Developer",
+        company:"Astana IT Solutions",
+        city:"Астана",
+        salary:450000,
+        experience:1,
+        category:"Бағдарламалау",
+        type:"Толық жұмыс күні",
+        days:1,
+        skills:["Python","Django","SQL"],
+        description:"Python тілінде бағдарламалар әзірлеу."
+    },
+
+    {
+        id:2,
+        title:"Data Analyst",
+        company:"Digital Kazakhstan",
+        city:"Алматы",
+        salary:400000,
+        experience:1,
+        category:"Талдау",
+        type:"Толық жұмыс күні",
+        days:2,
+        skills:["SQL","Excel","Power BI"],
+        description:"Деректерді талдау және есептер дайындау."
+    },
+
+    {
+        id:3,
+        title:"Data Scientist",
+        company:"FinTech Group",
+        city:"Астана",
+        salary:600000,
+        experience:2,
+        category:"Жасанды интеллект",
+        type:"Толық жұмыс күні",
+        days:3,
+        skills:["Python","Pandas","ML"],
+        description:"Деректермен және машиналық оқыту модельдерімен жұмыс."
+    },
+
+    {
+        id:4,
+        title:"Junior SQL Developer",
+        company:"Smart Education",
+        city:"Қарағанды",
+        salary:300000,
+        experience:0,
+        category:"Деректер қоры",
+        type:"Тағылымдама",
+        days:5,
+        skills:["SQL","PostgreSQL"],
+        description:"SQL сұраныстарын жазу және деректер қорымен жұмыс."
+    },
+
+    {
+        id:5,
+        title:"Web Developer",
+        company:"TechnoPark",
+        city:"Шымкент",
+        salary:380000,
+        experience:1,
+        category:"Веб-әзірлеу",
+        type:"Толық жұмыс күні",
+        days:6,
+        skills:["HTML","CSS","JavaScript"],
+        description:"Веб-сайттарды әзірлеу және қолдау."
+    },
+
+    {
+        id:6,
+        title:"Machine Learning Engineer",
+        company:"DataLab",
+        city:"Алматы",
+        salary:650000,
+        experience:2,
+        category:"Жасанды интеллект",
+        type:"Қашықтан",
+        days:4,
+        skills:["PyTorch","Python","MLOps"],
+        description:"Машиналық оқыту модельдерін жасау."
+    },
+
+    {
+        id:7,
+        title:"AI Engineer",
+        company:"AI Future",
+        city:"Астана",
+        salary:700000,
+        experience:3,
+        category:"Жасанды интеллект",
+        type:"Толық жұмыс күні",
+        days:8,
+        skills:["LLM","Python","API"],
+        description:"Жасанды интеллект негізінде шешімдер әзірлеу."
+    },
+
+    {
+        id:8,
+        title:"Database Administrator",
+        company:"Web Solutions",
+        city:"Қарағанды",
+        salary:420000,
+        experience:2,
+        category:"Деректер қоры",
+        type:"Толық жұмыс күні",
+        days:10,
+        skills:["PostgreSQL","Backup","Linux"],
+        description:"Деректер қорын басқару және қызмет көрсету."
+    },
+
+    {
+        id:9,
+        title:"Financial Analyst",
+        company:"Smart Finance",
+        city:"Алматы",
+        salary:500000,
+        experience:1,
+        category:"Қаржы",
+        type:"Толық жұмыс күні",
+        days:12,
+        skills:["Excel","Қаржылық талдау"],
+        description:"Қаржылық көрсеткіштерді талдау."
+    },
+
+    {
+        id:10,
+        title:"IT Support Specialist",
+        company:"EduTech KZ",
+        city:"Шымкент",
+        salary:280000,
+        experience:0,
+        category:"IT-қолдау",
+        type:"Ауысымдық кесте",
+        days:15,
+        skills:["Windows","Желілер"],
+        description:"Пайдаланушыларға техникалық қолдау көрсету."
+    },
+
+    {
+        id:11,
+        title:"Frontend Developer",
+        company:"Nomad Soft",
+        city:"Астана",
+        salary:520000,
+        experience:2,
+        category:"Веб-әзірлеу",
+        type:"Қашықтан",
+        days:1,
+        skills:["React","TypeScript","CSS"],
+        description:"Веб-қосымшалардың интерфейстерін жасау."
+    },
+
+    {
+        id:12,
+        title:"QA Engineer",
+        company:"Qazaq Tech",
+        city:"Алматы",
+        salary:350000,
+        experience:1,
+        category:"Тестілеу",
+        type:"Толық жұмыс күні",
+        days:7,
+        skills:["Тест-кейстер","Postman"],
+        description:"Веб және мобильді қосымшаларды тестілеу."
+    },
+
+    {
+        id:13,
+        title:"UX/UI Designer",
+        company:"Creative Hub",
+        city:"Астана",
+        salary:430000,
+        experience:1,
+        category:"Дизайн",
+        type:"Жартылай жұмыс күні",
+        days:9,
+        skills:["Figma","Прототиптер"],
+        description:"Интерфейстер мен прототиптерді жобалау."
+    },
+
+    {
+        id:14,
+        title:"Бухгалтер",
+        company:"Alem Trade",
+        city:"Шымкент",
+        salary:260000,
+        experience:2,
+        category:"Қаржы",
+        type:"Толық жұмыс күні",
+        days:20,
+        skills:["1С","Салықтар"],
+        description:"Бухгалтерлік және салықтық есепті жүргізу."
+    },
+
+    {
+        id:15,
+        title:"Сату менеджері",
+        company:"Steppe Group",
+        city:"Қарағанды",
+        salary:320000,
+        experience:0,
+        category:"Сату",
+        type:"Ауысымдық кесте",
+        days:2,
+        skills:["Келіссөздер","CRM"],
+        description:"Клиенттермен жұмыс және мәмілелер жасау."
+    },
+
+    {
+        id:16,
+        title:"Информатика мұғалімі",
+        company:"Bilim School",
+        city:"Астана",
+        salary:290000,
+        experience:0,
+        category:"Білім беру",
+        type:"Жартылай жұмыс күні",
+        days:25,
+        skills:["Информатика","Педагогика"],
+        description:"Информатика сабақтарын өткізу."
+    },
+
+    {
+        id:17,
+        title:"Cybersecurity Specialist",
+        company:"SafeNet KZ",
+        city:"Астана",
+        salary:800000,
+        experience:3,
+        category:"Ақпараттық қауіпсіздік",
+        type:"Толық жұмыс күні",
+        days:3,
+        skills:["SIEM","Pentest","Linux"],
+        description:"Инфрақұрылымды қорғау және инциденттерді бақылау."
+    },
+
+    {
+        id:18,
+        title:"Контент-менеджер",
+        company:"Media Qazaq",
+        city:"Алматы",
+        salary:240000,
+        experience:0,
+        category:"Маркетинг",
+        type:"Қашықтан",
+        days:11,
+        skills:["SMM","Копирайтинг"],
+        description:"Әлеуметтік желілерді жүргізу және контент дайындау."
+    }
+
 ];
 
+
+// ========================================
+// 2. БАСТАПҚЫ БАПТАУЛАР
+// ========================================
+
 const PAGE = 6;
+
 let shown = PAGE;
+
 let favs = load("qyzmet_favs");
 
-function load(k){ try { return JSON.parse(localStorage.getItem(k) || "[]"); } catch(e){ return []; } }
-function save(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
-const $ = id => document.getElementById(id);
-const uniq = key => [...new Set(vacancies.map(v => v[key]))].sort();
+function load(k) {
 
-function fillSelect(id, values){
-  values.forEach(v => $(id).insertAdjacentHTML("beforeend", `<option value="${v}">${v}</option>`));
+    try {
+        return JSON.parse(localStorage.getItem(k) || "[]");
+    } catch(e) {
+        return [];
+    }
+
 }
+
+function save(k,v) {
+
+    try {
+        localStorage.setItem(k, JSON.stringify(v));
+    } catch(e) {}
+
+}
+
+const $ = id => document.getElementById(id);
+
+const uniq = key =>
+    [...new Set(vacancies.map(v => v[key]))].sort();
+
+
+// ========================================
+// 3. ТАҢДАУ ТІЗІМДЕРІН ТОЛТЫРУ
+// ========================================
+
+function fillSelect(id, values) {
+
+    values.forEach(v => {
+
+        $(id).insertAdjacentHTML(
+            "beforeend",
+            `<option value="${v}">${v}</option>`
+        );
+
+    });
+
+}
+
 fillSelect("city", uniq("city"));
 fillSelect("category", uniq("category"));
 fillSelect("type", uniq("type"));
 
-// Статистика в шапке
+
+// ========================================
+// 4. СТАТИСТИКА
+// ========================================
+
 $("stJobs").textContent = vacancies.length;
+
 $("stCities").textContent = uniq("city").length;
-$("stAvg").textContent = Math.round(vacancies.reduce((s,v)=>s+v.salary,0)/vacancies.length).toLocaleString("kk-KZ");
 
-function expText(e){ return e === 0 ? "тәжірибесіз" : e + " жылдан"; }
-function dayText(d){ return d <= 1 ? "бүгін/кеше" : d + " күн бұрын"; }
+$("stAvg").textContent = Math.round(
+    vacancies.reduce((s,v) => s + v.salary, 0) /
+    vacancies.length
+).toLocaleString("kk-KZ");
 
-function getFiltered(){
-  const q = $("search").value.trim().toLowerCase();
-  const city = $("city").value, cat = $("category").value, type = $("type").value;
-  const exp = $("exp").value, period = Number($("period").value) || 0;
-  const min = Number($("minSalary").value) || 0;
-  const max = Number($("maxSalary").value) || Infinity;
-  const onlyFav = $("favOnly").checked;
 
-  let list = vacancies.filter(j => {
-    const text = (j.title+" "+j.company+" "+j.category+" "+j.skills.join(" ")).toLowerCase();
-    return text.includes(q)
-      && (!city || j.city === city)
-      && (!cat || j.category === cat)
-      && (!type || j.type === type)
-      && (exp === "" || (exp === "3" ? j.experience >= 3 : j.experience <= Number(exp)))
-      && (!period || j.days <= period)
-      && j.salary >= min && j.salary <= max
-      && (!onlyFav || favs.includes(j.id));
-  });
+// ========================================
+// 5. ҚОСЫМША ФУНКЦИЯЛАР
+// ========================================
 
-  const s = $("sort").value;
-  const sorters = {
-    new:(a,b)=>a.days-b.days,
-    salDesc:(a,b)=>b.salary-a.salary,
-    salAsc:(a,b)=>a.salary-b.salary,
-    expAsc:(a,b)=>a.experience-b.experience,
-    expDesc:(a,b)=>b.experience-a.experience,
-    title:(a,b)=>a.title.localeCompare(b.title,"ru")
-  };
-  return list.sort(sorters[s]);
+function expText(e) {
+
+    return e === 0 ? "тәжірибесіз" : e + " жылдан";
+
 }
 
-function renderJobs(){
-  const list = getFiltered();
-  $("favCount").textContent = favs.length;
-  $("resultCount").textContent = "Табылды: " + list.length;
-  $("moreBtn").style.display = list.length > shown ? "block" : "none";
+function dayText(d) {
 
-  if(!list.length){
-    $("jobList").innerHTML = `<div class="empty"><h3>Бос орындар табылмады</h3>
-      <p style="margin-top:10px">Іздеу параметрлерін өзгертіп көріңіз.</p></div>`;
-    return;
-  }
-  $("jobList").innerHTML = list.slice(0, shown).map(j => `
-    <article class="job-card">
-      <div class="job-top">
-        <div>
-          <div class="company">${j.company}</div>
-          <span class="tag">${j.category}</span><span class="tag t2">${j.type}</span>
+    return d <= 1 ? "бүгін/кеше" : d + " күн бұрын";
+
+}
+
+
+// ========================================
+// 6. ВАКАНСИЯЛАРДЫ СҮЗУ
+// ========================================
+
+function getFiltered() {
+
+    const q = $("search").value.trim().toLowerCase();
+
+    const city = $("city").value;
+
+    const cat = $("category").value;
+
+    const type = $("type").value;
+
+    const exp = $("exp").value;
+
+    const period = Number($("period").value) || 0;
+
+    const min = Number($("minSalary").value) || 0;
+
+    const max = Number($("maxSalary").value) || Infinity;
+
+    const onlyFav = $("favOnly").checked;
+
+
+    let list = vacancies.filter(j => {
+
+        const text = (
+            j.title + " " +
+            j.company + " " +
+            j.category + " " +
+            j.skills.join(" ")
+        ).toLowerCase();
+
+        return text.includes(q)
+
+            && (!city || j.city === city)
+
+            && (!cat || j.category === cat)
+
+            && (!type || j.type === type)
+
+            && (
+                exp === "" ||
+                (exp === "3"
+                ? j.experience >= 3
+                : j.experience <= Number(exp))
+            )
+
+            && (!period || j.days <= period)
+
+            && j.salary >= min
+
+            && j.salary <= max
+
+            && (!onlyFav || favs.includes(j.id));
+
+    });
+
+
+    const s = $("sort").value;
+
+    const sorters = {
+
+        new:(a,b) => a.days - b.days,
+
+        salDesc:(a,b) => b.salary - a.salary,
+
+        salAsc:(a,b) => a.salary - b.salary,
+
+        expAsc:(a,b) => a.experience - b.experience,
+
+        expDesc:(a,b) => b.experience - a.experience,
+
+        title:(a,b) => a.title.localeCompare(b.title,"ru")
+
+    };
+
+    return list.sort(sorters[s]);
+
+}
+
+
+// ========================================
+// 7. ВАКАНСИЯЛАРДЫ ЭКРАНҒА ШЫҒАРУ
+// ========================================
+
+function renderJobs() {
+
+    const list = getFiltered();
+
+    $("favCount").textContent = favs.length;
+
+    $("resultCount").textContent = "Табылды: " + list.length;
+
+    $("moreBtn").style.display =
+        list.length > shown ? "block" : "none";
+
+
+    if (!list.length) {
+
+        $("jobList").innerHTML = `
+
+            <div class="empty">
+
+                <h3>Бос орындар табылмады</h3>
+
+                <p style="margin-top:10px">
+                    Іздеу параметрлерін өзгертіп көріңіз.
+                </p>
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    $("jobList").innerHTML = list.slice(0, shown).map(j => `
+
+        <article class="job-card">
+
+            <div class="job-top">
+
+                <div>
+
+                    <div class="company">${j.company}</div>
+
+                    <span class="tag">${j.category}</span>
+
+                    <span class="tag t2">${j.type}</span>
+
+                </div>
+
+                <div class="job-icon">
+                    ${j.title.charAt(0)}
+                </div>
+
+            </div>
+
+            <h3>${j.title}</h3>
+
+            <p style="color:#6b7280;font-size:14px">
+                ${j.description}
+            </p>
+
+            <div class="job-info">
+
+                <span>📍 ${j.city}</span>
+
+                <span>💼 Тәжірибе: ${expText(j.experience)}</span>
+
+                <span>🕒 ${dayText(j.days)}</span>
+
+            </div>
+
+            <div class="salary">
+                ${j.salary.toLocaleString("kk-KZ")} ₸
+            </div>
+
+            <div class="job-actions">
+
+                <button class="apply-btn"
+                onclick="openModal(${j.id})">
+                    Өтініш беру
+                </button>
+
+                <button class="details-btn"
+                onclick="showDetails(${j.id})">
+                    Толығырақ
+                </button>
+
+                <button class="fav-btn ${favs.includes(j.id) ? "on" : ""}"
+                title="Таңдаулыларға"
+                onclick="toggleFav(${j.id})">
+                    ♥
+                </button>
+
+            </div>
+
+        </article>
+
+    `).join("");
+
+}
+
+
+function resetPage() {
+
+    shown = PAGE;
+
+    renderJobs();
+
+}
+
+
+function showMore() {
+
+    shown += PAGE;
+
+    renderJobs();
+
+}
+
+
+function resetFilters() {
+
+    ["search","minSalary","maxSalary"].forEach(i => {
+        $(i).value = "";
+    });
+
+    ["city","category","type","exp","period"].forEach(i => {
+        $(i).value = "";
+    });
+
+    $("favOnly").checked = false;
+
+    $("sort").value = "new";
+
+    resetPage();
+
+}
+
+
+// ========================================
+// 8. ТАҢДАУЛЫ ВАКАНСИЯЛАР
+// ========================================
+
+function toggleFav(id) {
+
+    favs = favs.includes(id)
+        ? favs.filter(f => f !== id)
+        : [...favs, id];
+
+    save("qyzmet_favs", favs);
+
+    renderJobs();
+
+}
+
+
+function toggleFavOnly() {
+
+    $("favOnly").checked = !$("favOnly").checked;
+
+    resetPage();
+
+    $("jobs").scrollIntoView({
+        behavior:"smooth"
+    });
+
+}
+
+
+// ========================================
+// 9. ХАБАРЛАМА
+// ========================================
+
+function toast(msg) {
+
+    const t = $("toast");
+
+    t.textContent = msg;
+
+    t.style.display = "block";
+
+    setTimeout(() => {
+        t.style.display = "none";
+    }, 2500);
+
+}
+
+
+// ========================================
+// 10. ВАКАНСИЯ ТУРАЛЫ ТОЛЫҚ АҚПАРАТ
+// ========================================
+
+function showDetails(id) {
+
+    const j = vacancies.find(v => v.id === id);
+
+    $("detailBody").innerHTML = `
+
+        <h2>${j.title}</h2>
+
+        <p class="company" style="margin-bottom:14px">
+            ${j.company}
+        </p>
+
+        <div class="row">
+            <span>Жалақы</span>
+            <b>${j.salary.toLocaleString("kk-KZ")} ₸</b>
         </div>
-        <div class="job-icon">${j.title.charAt(0)}</div>
-      </div>
-      <h3>${j.title}</h3>
-      <p style="color:#6b7280;font-size:14px">${j.description}</p>
-      <div class="job-info">
-        <span>📍 ${j.city}</span>
-        <span>💼 Тәжірибе: ${expText(j.experience)}</span>
-        <span>🕒 ${dayText(j.days)}</span>
-      </div>
-      <div class="salary">${j.salary.toLocaleString("kk-KZ")} ₸</div>
-      <div class="job-actions">
-        <button class="apply-btn" onclick="openModal(${j.id})">Өтініш беру</button>
-        <button class="details-btn" onclick="showDetails(${j.id})">Толығырақ</button>
-        <button class="fav-btn ${favs.includes(j.id)?"on":""}" title="Таңдаулыларға" onclick="toggleFav(${j.id})">♥</button>
-      </div>
-    </article>`).join("");
+
+        <div class="row">
+            <span>Қала</span>
+            <span>${j.city}</span>
+        </div>
+
+        <div class="row">
+            <span>Сала</span>
+            <span>${j.category}</span>
+        </div>
+
+        <div class="row">
+            <span>Жұмыспен қамту түрі</span>
+            <span>${j.type}</span>
+        </div>
+
+        <div class="row">
+            <span>Тәжірибе</span>
+            <span>${expText(j.experience)}</span>
+        </div>
+
+        <div class="row">
+            <span>Жарияланған</span>
+            <span>${dayText(j.days)}</span>
+        </div>
+
+        <p style="margin:14px 0 6px">
+            <b>Сипаттама</b>
+        </p>
+
+        <p style="color:#6b7280;font-size:14px">
+            ${j.description}
+        </p>
+
+        <p style="margin:14px 0 6px">
+            <b>Дағдылар</b>
+        </p>
+
+        ${j.skills.map(s => `
+            <span class="tag t2" style="margin-top:0">${s}</span>
+        `).join("")}
+
+    `;
+
+    $("detailApply").onclick = () => {
+
+        closeModals();
+
+        openModal(id);
+
+    };
+
+    $("detailModal").style.display = "flex";
+
 }
 
-function resetPage(){ shown = PAGE; renderJobs(); }
-function showMore(){ shown += PAGE; renderJobs(); }
 
-function resetFilters(){
-  ["search","minSalary","maxSalary"].forEach(i => $(i).value = "");
-  ["city","category","type","exp","period"].forEach(i => $(i).value = "");
-  $("favOnly").checked = false;
-  $("sort").value = "new";
-  resetPage();
-}
+// ========================================
+// 11. ӨТІНІШ БЕРУ
+// ========================================
 
-function toggleFav(id){
-  favs = favs.includes(id) ? favs.filter(f => f !== id) : [...favs, id];
-  save("qyzmet_favs", favs);
-  renderJobs();
-}
-function toggleFavOnly(){
-  $("favOnly").checked = !$("favOnly").checked;
-  resetPage();
-  $("jobs").scrollIntoView({behavior:"smooth"});
+function openModal(id) {
+
+    $("applyForm").dataset.jobId = id;
+
+    const j = vacancies.find(v => v.id === id);
+
+    $("modalJob").textContent =
+        j.title + " — " + j.company;
+
+    $("modal").style.display = "flex";
+
 }
 
-function toast(msg){
-  const t = $("toast"); t.textContent = msg; t.style.display = "block";
-  setTimeout(() => t.style.display = "none", 2500);
+
+function closeModals() {
+
+    $("modal").style.display = "none";
+
+    $("detailModal").style.display = "none";
+
+    $("authModal").style.display = "none";
+
 }
 
-function showDetails(id){
-  const j = vacancies.find(v => v.id === id);
-  $("detailBody").innerHTML = `
-    <h2>${j.title}</h2>
-    <p class="company" style="margin-bottom:14px">${j.company}</p>
-    <div class="row"><span>Жалақы</span><b>${j.salary.toLocaleString("kk-KZ")} ₸</b></div>
-    <div class="row"><span>Қала</span><span>${j.city}</span></div>
-    <div class="row"><span>Сала</span><span>${j.category}</span></div>
-    <div class="row"><span>Жұмыспен қамту түрі</span><span>${j.type}</span></div>
-    <div class="row"><span>Тәжірибе</span><span>${expText(j.experience)}</span></div>
-    <div class="row"><span>Жарияланған</span><span>${dayText(j.days)}</span></div>
-    <p style="margin:14px 0 6px"><b>Сипаттама</b></p>
-    <p style="color:#6b7280;font-size:14px">${j.description}</p>
-    <p style="margin:14px 0 6px"><b>Дағдылар</b></p>
-    ${j.skills.map(s => `<span class="tag t2" style="margin-top:0">${s}</span>`).join("")}`;
-  $("detailApply").onclick = () => { closeModals(); openModal(id); };
-  $("detailModal").style.display = "flex";
-}
 
-function openModal(id){
-  $("applyForm").dataset.jobId = id;
-  const j = vacancies.find(v => v.id === id);
-  $("modalJob").textContent = j.title + " — " + j.company;
-  $("modal").style.display = "flex";
-}
-function closeModals(){
-  $("modal").style.display = "none";
-  $("detailModal").style.display = "none";
-}
 document.querySelectorAll(".modal").forEach(m =>
-  m.addEventListener("click", e => { if(e.target === m) closeModals(); }));
-document.addEventListener("keydown", e => { if(e.key === "Escape") closeModals(); });
 
-$("applyForm").addEventListener("submit", function(e){
-  e.preventDefault();
-  const id = Number(this.dataset.jobId);
-  const j = vacancies.find(v => v.id === id);
-  const apps = load("qyzmet_applications");
-  apps.push({
-    vacancy_id: id, vacancy: j.title,
-    name: $("appName").value.trim(), email: $("appEmail").value.trim(),
-    message: $("appText").value.trim(),
-    date: new Date().toISOString().slice(0,10)
-  });
-  save("qyzmet_applications", apps);
-  toast("Сынақ өтініші осы браузерде сақталды!");
-  this.reset(); closeModals();
+    m.addEventListener("click", e => {
+
+        if (e.target === m) {
+            closeModals();
+        }
+
+    })
+
+);
+
+
+document.addEventListener("keydown", e => {
+
+    if (e.key === "Escape") {
+        closeModals();
+    }
+
 });
 
-// Живой поиск и фильтры
-["search","minSalary","maxSalary"].forEach(i => $(i).addEventListener("input", resetPage));
-["city","category","type","exp","period","sort","favOnly"].forEach(i => $(i).addEventListener("change", resetPage));
+
+$("applyForm").addEventListener("submit", function(e) {
+
+    e.preventDefault();
+
+    const id = Number(this.dataset.jobId);
+
+    const j = vacancies.find(v => v.id === id);
+
+    const apps = load("qyzmet_applications");
+
+    apps.push({
+
+        vacancy_id: id,
+
+        vacancy: j.title,
+
+        name: $("appName").value.trim(),
+
+        email: $("appEmail").value.trim(),
+
+        message: $("appText").value.trim(),
+
+        date: new Date().toISOString().slice(0,10)
+
+    });
+
+    save("qyzmet_applications", apps);
+
+    toast("Сынақ өтініші осы браузерде сақталды!");
+
+    this.reset();
+
+    closeModals();
+
+});
+
+
+// ========================================
+// 12. ІЗДЕУ ЖӘНЕ СҮЗГІЛЕР
+// ========================================
+
+["search","minSalary","maxSalary"].forEach(i =>
+
+    $(i).addEventListener("input", resetPage)
+
+);
+
+
+["city","category","type","exp","period","sort","favOnly"].forEach(i =>
+
+    $(i).addEventListener("change", resetPage)
+
+);
+  // ========================================
+// 13. АККАУНТТАР ЖҮЙЕСІ
+// ========================================
+
+// Қазіргі режим
+let authMode = "login";
+
+// Қазіргі қолданушы
+let currentUserEmail =
+    localStorage.getItem("qyzmet_current_user") || "";
+
+
+// Барлық аккаунттарды алу
+function getAccounts() {
+
+    try {
+
+        return JSON.parse(
+            localStorage.getItem("qyzmet_accounts") || "{}"
+        );
+
+    } catch(e) {
+
+        return {};
+
+    }
+
+}
+
+
+// Аккаунттарды сақтау
+function saveAccounts(accounts) {
+
+    localStorage.setItem(
+        "qyzmet_accounts",
+        JSON.stringify(accounts)
+    );
+
+}
+
+
+// ========================================
+// 14. ТІРКЕЛУ ЖӘНЕ КІРУ ТЕРЕЗЕСІ
+// ========================================
+
+function openAuth(mode) {
+
+    authMode = mode;
+
+    $("authModal").style.display = "flex";
+
+    $("authForm").reset();
+
+    updateAuthModal();
+
+}
+
+
+// Кіру мен тіркелуді ауыстыру
+function switchAuthMode() {
+
+    authMode =
+        authMode === "login" ? "register" : "login";
+
+    updateAuthModal();
+
+}
+
+
+// Терезедегі жазуларды өзгерту
+function updateAuthModal() {
+
+    const isRegister = authMode === "register";
+
+    $("authTitle").textContent =
+        isRegister
+        ? "Жаңа аккаунт тіркеу"
+        : "Аккаунтқа кіру";
+
+    $("authSubmit").textContent =
+        isRegister ? "Тіркелу" : "Кіру";
+
+    $("registerNameWrap").style.display =
+        isRegister ? "block" : "none";
+
+    $("registerName").required = isRegister;
+
+    $("authSwitch").textContent =
+        isRegister
+        ? "Аккаунтыңыз бар ма? Кіру"
+        : "Аккаунтыңыз жоқ па? Тіркелу";
+
+}
+
+
+// ========================================
+// 15. АККАУНТТЫ ТІРКЕУ ЖӘНЕ КІРУ
+// ========================================
+
+$("authForm").addEventListener("submit", function(e) {
+
+    e.preventDefault();
+
+    const email =
+        $("authEmail").value.trim().toLowerCase();
+
+    const password =
+        $("authPassword").value;
+
+    const accounts = getAccounts();
+
+
+    // ЖАҢА АККАУНТ ТІРКЕУ
+    if (authMode === "register") {
+
+        // Электрондық пошта бұрын тіркелген бе?
+        if (accounts[email]) {
+
+            toast("Бұл электрондық пошта бұрын тіркелген.");
+
+            return;
+
+        }
+
+
+        // Жаңа қолданушыны қосу
+        accounts[email] = {
+
+            password: password,
+
+            profile: {
+
+                name: $("registerName").value.trim(),
+
+                age: "",
+
+                city: "",
+
+                phone: "",
+
+                education: "",
+
+                experience: "",
+
+                skills: "",
+
+                linkedin: "",
+
+                about: "",
+
+                resume: ""
+
+            }
+
+        };
+
+
+        saveAccounts(accounts);
+
+
+        currentUserEmail = email;
+
+        localStorage.setItem(
+            "qyzmet_current_user",
+            email
+        );
+
+
+        closeModals();
+
+        updateAuthNav();
+
+        openAccountPage();
+
+        toast("Аккаунт сәтті құрылды!");
+
+    }
+
+
+    // БҰРЫН ТІРКЕЛГЕН АККАУНТҚА КІРУ
+    else {
+
+        if (
+            !accounts[email] ||
+            accounts[email].password !== password
+        ) {
+
+            toast("Электрондық пошта немесе құпиясөз қате.");
+
+            return;
+
+        }
+
+
+        currentUserEmail = email;
+
+        localStorage.setItem(
+            "qyzmet_current_user",
+            email
+        );
+
+
+        closeModals();
+
+        updateAuthNav();
+
+        openAccountPage();
+
+        toast("Аккаунтқа сәтті кірдіңіз!");
+
+    }
+
+});
+
+
+// ========================================
+// 16. ЖОҒАРҒЫ ОҢ ЖАҚТАҒЫ БАТЫРМАЛАР
+// ========================================
+
+function updateAuthNav() {
+
+    const nav = $("authNav");
+
+
+    if (currentUserEmail) {
+
+        nav.innerHTML = `
+
+            <button class="account-btn"
+            onclick="openAccountPage()">
+
+                Менің аккаунтым
+
+            </button>
+
+        `;
+
+    }
+
+    else {
+
+        nav.innerHTML = `
+
+            <button class="login-btn"
+            onclick="openAuth('login')">
+
+                Кіру
+
+            </button>
+
+            <button class="register-btn"
+            onclick="openAuth('register')">
+
+                Тіркелу
+
+            </button>
+
+        `;
+
+    }
+
+}
+
+
+// ========================================
+// 17. ЖЕКЕ АККАУНТ БЕТІН АШУ
+// ========================================
+
+function openAccountPage() {
+
+    if (!currentUserEmail) {
+
+        openAuth("login");
+
+        return;
+
+    }
+
+
+    $("accountPage").style.display = "block";
+
+    $("jobs").style.display = "none";
+
+    $("about").style.display = "none";
+
+
+    loadProfileForm();
+
+
+    window.scrollTo({
+
+        top: 0,
+
+        behavior: "smooth"
+
+    });
+
+}
+
+
+// Вакансиялар бетіне қайту
+function showJobsPage() {
+
+    $("accountPage").style.display = "none";
+
+    $("jobs").style.display = "grid";
+
+    $("about").style.display = "block";
+
+}
+
+
+// ========================================
+// 18. АККАУНТТАН ШЫҒУ
+// ========================================
+
+function logout() {
+
+    currentUserEmail = "";
+
+    localStorage.removeItem("qyzmet_current_user");
+
+    updateAuthNav();
+
+    showJobsPage();
+
+    toast("Аккаунттан шықтыңыз.");
+
+}
+
+
+// ========================================
+// 19. ПРОФИЛЬ МӘЛІМЕТТЕРІН ЖҮКТЕУ
+// ========================================
+
+function loadProfileForm() {
+
+    const accounts = getAccounts();
+
+    const profile =
+        accounts[currentUserEmail]?.profile || {};
+
+
+    const fields = {
+
+        profileName: "name",
+
+        profileAge: "age",
+
+        profileCity: "city",
+
+        profilePhone: "phone",
+
+        profileEducation: "education",
+
+        profileExperience: "experience",
+
+        profileSkills: "skills",
+
+        profileLinkedin: "linkedin",
+
+        profileAbout: "about",
+
+        profileResume: "resume"
+
+    };
+
+
+    // Сақталған мәліметтерді формаға шығару
+    Object.entries(fields).forEach(([elementId, key]) => {
+
+        $(elementId).value = profile[key] || "";
+
+    });
+
+
+    // Профильдің қысқаша ақпараты
+    $("profileSummary").innerHTML = `
+
+        <p>
+            <b>Аккаунт:</b>
+            ${escapeHTML(currentUserEmail)}
+        </p>
+
+        <p>
+            <b>Аты-жөні:</b>
+            ${escapeHTML(profile.name || "Әзірге енгізілмеген")}
+        </p>
+
+        <p>
+            <b>Қала:</b>
+            ${escapeHTML(profile.city || "Көрсетілмеген")}
+        </p>
+
+        <p>
+            <b>Дағдылар:</b>
+            ${escapeHTML(profile.skills || "Көрсетілмеген")}
+        </p>
+
+    `;
+
+}
+
+
+// ========================================
+// 20. HTML ҚАУІПСІЗДІГІ
+// ========================================
+
+function escapeHTML(value) {
+
+    return String(value).replace(/[&<>"']/g, ch => ({
+
+        "&": "&amp;",
+
+        "<": "&lt;",
+
+        ">": "&gt;",
+
+        '"': "&quot;",
+
+        "'": "&#39;"
+
+    }[ch]));
+
+}
+
+
+// ========================================
+// 21. ПРОФИЛЬ АҚПАРАТЫН САҚТАУ
+// ========================================
+
+$("profileForm").addEventListener("submit", function(e) {
+
+    e.preventDefault();
+
+
+    if (!currentUserEmail) return;
+
+
+    const accounts = getAccounts();
+
+
+    if (!accounts[currentUserEmail]) return;
+
+
+    // Қолданушының барлық мәліметтерін сақтау
+    accounts[currentUserEmail].profile = {
+
+        name: $("profileName").value.trim(),
+
+        age: $("profileAge").value,
+
+        city: $("profileCity").value.trim(),
+
+        phone: $("profilePhone").value.trim(),
+
+        education: $("profileEducation").value.trim(),
+
+        experience: $("profileExperience").value.trim(),
+
+        skills: $("profileSkills").value.trim(),
+
+        linkedin: $("profileLinkedin").value.trim(),
+
+        about: $("profileAbout").value.trim(),
+
+        resume: $("profileResume").value.trim()
+
+    };
+
+
+    saveAccounts(accounts);
+
+
+    loadProfileForm();
+
+
+    toast("Жеке ақпаратыңыз сақталды!");
+
+});
+
+
+// ========================================
+// 22. БЕТТІ ҚАЙТА АШҚАНДА АККАУНТТЫ ТЕКСЕРУ
+// ========================================
+
+updateAuthNav();
+
+
+// ========================================
+// 23. ӨТІНІШ ФОРМАСЫН АВТОМАТТЫ ТОЛТЫРУ
+// ========================================
+
+const originalOpenModal = openModal;
+
+openModal = function(id) {
+
+    originalOpenModal(id);
+
+
+    if (currentUserEmail) {
+
+        const profile =
+            getAccounts()[currentUserEmail]?.profile || {};
+
+
+        $("appName").value = profile.name || "";
+
+        $("appEmail").value = currentUserEmail;
+
+        $("appText").value = profile.about || "";
+
+    }
+
+};
+
+
+// ========================================
+// 24. САЙТТЫ ІСКЕ ҚОСУ
+// ========================================
 
 renderJobs();
+
 </script>
+
 </body>
 </html>
