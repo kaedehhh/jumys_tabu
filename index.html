@@ -1,0 +1,485 @@
+# -*- coding: utf-8 -*-
+"""
+Жасанды интеллект негізіндегі жұмыс орындарын ұсыну жүйесі
+Толық код: деректер базасын құру, мәлімет енгізу, SQL сұраныстары,
+ұсыныстар және сұрыптау.
+"""
+
+import os
+import sqlite3
+import pandas as pd
+
+pd.set_option("display.width", 200)
+pd.set_option("display.max_columns", None)
+pd.set_option("display.unicode.east_asian_width", True)
+
+DB_NAME = "vacancies.db"
+
+# Файлды қайта іске қосқанда база таза құрылуы үшін ескісін өшіреміз
+if os.path.exists(DB_NAME):
+    os.remove(DB_NAME)
+
+conn = sqlite3.connect(DB_NAME)
+cursor = conn.cursor()
+cursor.execute("PRAGMA foreign_keys = ON")
+
+
+# =====================================================================
+# 1. КЕСТЕЛЕРДІ ҚҰРУ
+# =====================================================================
+cursor.executescript("""
+CREATE TABLE Users (
+    user_id INTEGER PRIMARY KEY,
+    full_name TEXT NOT NULL,
+    email TEXT UNIQUE,
+    phone TEXT,
+    city TEXT,
+    experience_years INTEGER CHECK (experience_years >= 0)
+);
+
+CREATE TABLE Companies (
+    company_id INTEGER PRIMARY KEY,
+    company_name TEXT NOT NULL,
+    industry TEXT,
+    city TEXT,
+    email TEXT
+);
+
+CREATE TABLE Vacancies (
+    vacancy_id INTEGER PRIMARY KEY,
+    company_id INTEGER,
+    title TEXT NOT NULL,
+    description TEXT,
+    city TEXT,
+    salary REAL CHECK (salary >= 0),
+    experience_years INTEGER,
+    FOREIGN KEY (company_id) REFERENCES Companies(company_id)
+);
+
+CREATE TABLE Skills (
+    skill_id INTEGER PRIMARY KEY,
+    skill_name TEXT NOT NULL,
+    category TEXT
+);
+
+CREATE TABLE User_Skills (
+    user_id INTEGER,
+    skill_id INTEGER,
+    skill_level TEXT,
+    PRIMARY KEY (user_id, skill_id),
+    FOREIGN KEY (user_id) REFERENCES Users(user_id),
+    FOREIGN KEY (skill_id) REFERENCES Skills(skill_id)
+);
+
+CREATE TABLE Vacancy_Skills (
+    vacancy_id INTEGER,
+    skill_id INTEGER,
+    required_level TEXT,
+    PRIMARY KEY (vacancy_id, skill_id),
+    FOREIGN KEY (vacancy_id) REFERENCES Vacancies(vacancy_id),
+    FOREIGN KEY (skill_id) REFERENCES Skills(skill_id)
+);
+
+CREATE TABLE Applications (
+    application_id INTEGER PRIMARY KEY,
+    user_id INTEGER,
+    vacancy_id INTEGER,
+    application_date TEXT,
+    status TEXT,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id),
+    FOREIGN KEY (vacancy_id) REFERENCES Vacancies(vacancy_id)
+);
+""")
+conn.commit()
+print("Деректер базасы құрылды!")
+print("7 кесте сәтті жасалды!\n")
+
+
+# =====================================================================
+# 2. МӘЛІМЕТТЕР ЕНГІЗУ
+# =====================================================================
+cursor.executemany("INSERT INTO Users VALUES (?, ?, ?, ?, ?, ?)", [
+    (1, 'Айдана Сәрсенова', 'aidana@mail.kz', '+77010000001', 'Астана', 1),
+    (2, 'Әлихан Нұрланов', 'alikhan@mail.kz', '+77010000002', 'Алматы', 2),
+    (3, 'Мадина Ермекова', 'madina@mail.kz', '+77010000003', 'Астана', 0),
+    (4, 'Данияр Ахметов', 'daniyar@mail.kz', '+77010000004', 'Қарағанды', 3),
+    (5, 'Аружан Қасымова', 'aruzhan@mail.kz', '+77010000005', 'Астана', 1),
+    (6, 'Нұрсұлтан Әлиев', 'nursultan@mail.kz', '+77010000006', 'Шымкент', 2),
+    (7, 'Әсем Мұратова', 'asem@mail.kz', '+77010000007', 'Алматы', 1),
+    (8, 'Ержан Беков', 'erzhan@mail.kz', '+77010000008', 'Астана', 4),
+    (9, 'Динара Омарова', 'dinara@mail.kz', '+77010000009', 'Қарағанды', 0),
+    (10, 'Тимур Қайратов', 'timur@mail.kz', '+77010000010', 'Шымкент', 2),
+])
+
+cursor.executemany("INSERT INTO Companies VALUES (?, ?, ?, ?, ?)", [
+    (1, 'Astana IT Solutions', 'IT', 'Астана', 'info@astanait.kz'),
+    (2, 'Digital Kazakhstan', 'IT', 'Алматы', 'hr@digital.kz'),
+    (3, 'FinTech Group', 'Қаржы', 'Астана', 'jobs@fintech.kz'),
+    (4, 'Smart Education', 'Білім беру', 'Қарағанды', 'hr@smartedu.kz'),
+    (5, 'TechnoPark', 'IT', 'Шымкент', 'info@technopark.kz'),
+    (6, 'DataLab', 'Деректерді талдау', 'Алматы', 'hr@datalab.kz'),
+    (7, 'AI Future', 'Жасанды интеллект', 'Астана', 'jobs@aifuture.kz'),
+    (8, 'Web Solutions', 'IT', 'Қарағанды', 'info@websolutions.kz'),
+    (9, 'Smart Finance', 'Қаржы', 'Алматы', 'hr@smartfinance.kz'),
+    (10, 'EduTech KZ', 'Білім беру', 'Шымкент', 'info@edutech.kz'),
+])
+
+cursor.executemany("INSERT INTO Vacancies VALUES (?, ?, ?, ?, ?, ?, ?)", [
+    (1, 1, 'Python Developer', 'Python тілінде бағдарламалау', 'Астана', 450000, 1),
+    (2, 2, 'Data Analyst', 'Деректерді талдау', 'Алматы', 400000, 1),
+    (3, 3, 'Data Scientist', 'Жасанды интеллект және деректер', 'Астана', 600000, 2),
+    (4, 4, 'Junior SQL Developer', 'SQL және деректер базасы', 'Қарағанды', 300000, 0),
+    (5, 5, 'Web Developer', 'Веб-сайттарды әзірлеу', 'Шымкент', 380000, 1),
+    (6, 6, 'Machine Learning Engineer', 'Машиналық оқыту модельдері', 'Алматы', 650000, 2),
+    (7, 7, 'AI Engineer', 'Жасанды интеллект жүйелері', 'Астана', 700000, 3),
+    (8, 8, 'Database Administrator', 'Деректер базасын басқару', 'Қарағанды', 420000, 2),
+    (9, 9, 'Financial Analyst', 'Қаржылық деректерді талдау', 'Алматы', 500000, 1),
+    (10, 10, 'IT Support Specialist', 'IT жүйелеріне қолдау көрсету', 'Шымкент', 280000, 0),
+])
+
+cursor.executemany("INSERT INTO Skills VALUES (?, ?, ?)", [
+    (1, 'Python', 'Бағдарламалау'),
+    (2, 'SQL', 'Деректер базасы'),
+    (3, 'Machine Learning', 'Жасанды интеллект'),
+    (4, 'Data Analysis', 'Деректерді талдау'),
+    (5, 'Communication', 'Жеке дағдылар'),
+    (6, 'Java', 'Бағдарламалау'),
+    (7, 'C++', 'Бағдарламалау'),
+    (8, 'Statistics', 'Математика'),
+    (9, 'HTML/CSS', 'Веб әзірлеу'),
+    (10, 'Excel', 'Деректерді талдау'),
+])
+
+# Алғашқы 10 жазба + 7-10 пайдаланушыларға қосымша дағдылар
+cursor.executemany("INSERT INTO User_Skills VALUES (?, ?, ?)", [
+    (1, 1, 'Орта'),
+    (1, 2, 'Бастапқы'),
+    (2, 1, 'Жоғары'),
+    (2, 3, 'Орта'),
+    (3, 2, 'Бастапқы'),
+    (3, 4, 'Орта'),
+    (4, 1, 'Жоғары'),
+    (4, 3, 'Жоғары'),
+    (5, 5, 'Жоғары'),
+    (6, 6, 'Орта'),
+    # --- қосымша (7-10 пайдаланушылар үшін ұсыныс жұмыс істеуі үшін) ---
+    (7, 4, 'Орта'),
+    (7, 10, 'Жоғары'),
+    (8, 2, 'Жоғары'),
+    (8, 1, 'Орта'),
+    (9, 9, 'Бастапқы'),
+    (10, 2, 'Бастапқы'),
+    (10, 9, 'Орта'),
+])
+
+# Алғашқы 10 жазба + 5, 8, 9, 10-вакансияларға қосымша талаптар
+cursor.executemany("INSERT INTO Vacancy_Skills VALUES (?, ?, ?)", [
+    (1, 1, 'Орта'),
+    (1, 2, 'Бастапқы'),
+    (2, 2, 'Орта'),
+    (2, 4, 'Орта'),
+    (3, 1, 'Жоғары'),
+    (3, 3, 'Жоғары'),
+    (4, 2, 'Бастапқы'),
+    (5, 1, 'Орта'),
+    (6, 3, 'Жоғары'),
+    (7, 1, 'Жоғары'),
+    # --- қосымша (8-10 вакансиялар үшін) ---
+    (5, 9, 'Орта'),
+    (7, 3, 'Жоғары'),
+    (8, 2, 'Жоғары'),
+    (9, 4, 'Орта'),
+    (9, 10, 'Орта'),
+    (10, 5, 'Бастапқы'),
+])
+
+cursor.executemany("INSERT INTO Applications VALUES (?, ?, ?, ?, ?)", [
+    (1, 1, 1, '2026-09-01', 'Қаралуда'),
+    (2, 1, 2, '2026-09-03', 'Қабылданды'),
+    (3, 2, 3, '2026-09-04', 'Қаралуда'),
+    (4, 3, 4, '2026-09-06', 'Қабылданды'),
+    (5, 4, 3, '2026-09-07', 'Қабылданбады'),
+    (6, 5, 5, '2026-09-08', 'Қаралуда'),
+    (7, 6, 6, '2026-09-09', 'Қаралуда'),
+    (8, 7, 7, '2026-09-10', 'Қабылданды'),
+    (9, 8, 8, '2026-09-11', 'Қаралуда'),
+    (10, 9, 9, '2026-09-12', 'Қабылданбады'),
+])
+
+conn.commit()
+print("Барлық 7 кестеге мәліметтер енгізілді!")
+
+for table in ['Users', 'Companies', 'Vacancies', 'Skills',
+              'User_Skills', 'Vacancy_Skills', 'Applications']:
+    count = cursor.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+    print(f"  {table}: {count} жазба")
+print()
+
+
+# =====================================================================
+# 3. НЕГІЗГІ SQL СҰРАНЫСТАРЫ (3.3 бөлімі)
+# =====================================================================
+def run(title, sql, params=()):
+    """SQL сұранысын орындап, нәтижені кесте түрінде шығарады."""
+    print("=" * 70)
+    print(title)
+    print("=" * 70)
+    print(pd.read_sql_query(sql, conn, params=params).to_string(index=False))
+    print()
+
+
+run("1. SELECT * — барлық бағандар", "SELECT * FROM Users")
+
+run("2. SELECT — белгілі бағандар",
+    "SELECT full_name, email, city FROM Users")
+
+run("3. DISTINCT — қайталанбайтын қалалар",
+    "SELECT DISTINCT city FROM Users")
+
+run("4. WHERE — Астана қаласындағы вакансиялар",
+    "SELECT title, city, salary FROM Vacancies WHERE city = 'Астана'")
+
+run("5. WHERE + AND — жалақы > 400000 және тәжірибе >= 1",
+    """SELECT title, salary, experience_years FROM Vacancies
+       WHERE salary > 400000 AND experience_years >= 1""")
+
+run("6. WHERE + OR — Астана немесе Алматы",
+    """SELECT title, city, salary FROM Vacancies
+       WHERE city = 'Астана' OR city = 'Алматы'""")
+
+run("7. IN — бағдарламалау немесе жасанды интеллект дағдылары",
+    """SELECT skill_name, category FROM Skills
+       WHERE category IN ('Бағдарламалау', 'Жасанды интеллект')""")
+
+run("8. BETWEEN — жалақы 300 000 – 500 000",
+    "SELECT title, salary FROM Vacancies WHERE salary BETWEEN 300000 AND 500000")
+
+run("9. LIKE — атауында 'Developer' бар вакансиялар",
+    "SELECT title, city, salary FROM Vacancies WHERE title LIKE '%Developer%'")
+
+run("10. ORDER BY — жалақы бойынша кему ретімен",
+    "SELECT title, salary FROM Vacancies ORDER BY salary DESC")
+
+run("11. LIMIT — ең жоғары жалақылы 3 вакансия",
+    "SELECT title, salary FROM Vacancies ORDER BY salary DESC LIMIT 3")
+
+run("12. COUNT, MIN, MAX",
+    """SELECT COUNT(*) AS total_vacancies,
+              MIN(salary) AS min_salary,
+              MAX(salary) AS max_salary
+       FROM Vacancies""")
+
+run("13. JOIN — қаралудағы өтінімдер",
+    """SELECT Users.full_name, Vacancies.title,
+              Applications.application_date, Applications.status
+       FROM Applications
+       JOIN Users ON Applications.user_id = Users.user_id
+       JOIN Vacancies ON Applications.vacancy_id = Vacancies.vacancy_id
+       WHERE Applications.status = 'Қаралуда'""")
+
+run("14. GROUP BY — қала бойынша вакансия саны",
+    "SELECT city, COUNT(*) AS vacancy_count FROM Vacancies GROUP BY city")
+
+run("15. GROUP BY + SUM — қала бойынша жалақы қосындысы",
+    "SELECT city, SUM(salary) AS total_salary FROM Vacancies GROUP BY city")
+
+run("16. LEFT JOIN + GROUP BY — компания бойынша вакансия саны",
+    """SELECT Companies.company_name,
+              COUNT(Vacancies.vacancy_id) AS vacancy_count
+       FROM Companies
+       LEFT JOIN Vacancies ON Companies.company_id = Vacancies.company_id
+       GROUP BY Companies.company_id, Companies.company_name""")
+
+
+# =====================================================================
+# 4. ҰСЫНЫС ЖҮЙЕСІ: СӘЙКЕСТІК + СҰРЫПТАУ
+# =====================================================================
+# Сұрыптау нұсқалары. ORDER BY бөлігі тек осы сөздіктен алынады,
+# сондықтан SQL-инъекциядан қорғалған.
+SORT_OPTIONS = {
+    "сәйкестік":     "match_percent DESC, v.salary DESC",
+    "жалақы_жоғары": "v.salary DESC, match_percent DESC",
+    "жалақы_төмен":  "v.salary ASC, match_percent DESC",
+    "тәжірибе_аз":   "v.experience_years ASC, match_percent DESC",
+    "тәжірибе_көп":  "v.experience_years DESC, match_percent DESC",
+    "атауы":         "v.title ASC",
+}
+
+
+def recommend_vacancies(user_id, sort_by="сәйкестік", same_city=False,
+                        min_salary=0, max_experience=None, top_n=5):
+    """Пайдаланушыға сәйкес вакансияларды ұсынады.
+
+    sort_by        - сұрыптау түрі (SORT_OPTIONS кілттерінің бірі)
+    same_city      - True болса, тек пайдаланушының қаласындағы вакансиялар
+    min_salary     - ең төменгі жалақы
+    max_experience - вакансияның тәжірибе талабының жоғарғы шегі
+                     (None болса, шектеусіз)
+    top_n          - нәтижедегі вакансиялар саны
+    """
+    if sort_by not in SORT_OPTIONS:
+        raise ValueError(
+            f"Қате сұрыптау түрі. Мүмкін нұсқалар: {list(SORT_OPTIONS)}")
+
+    exp_limit = 999 if max_experience is None else max_experience
+
+    query = f"""
+    SELECT
+        v.title,
+        c.company_name,
+        v.city,
+        v.salary,
+        v.experience_years,
+        COUNT(vs.skill_id) AS required_skills,
+        COUNT(us.skill_id) AS matched_skills,
+        ROUND(100.0 * COUNT(us.skill_id) / COUNT(vs.skill_id), 1)
+            AS match_percent
+    FROM Vacancies v
+    JOIN Companies c ON v.company_id = c.company_id
+    JOIN Vacancy_Skills vs ON v.vacancy_id = vs.vacancy_id
+    LEFT JOIN User_Skills us
+        ON us.skill_id = vs.skill_id AND us.user_id = ?
+    WHERE (? = 0 OR v.city = (SELECT city FROM Users WHERE user_id = ?))
+      AND v.salary >= ?
+      AND v.experience_years <= ?
+    GROUP BY v.vacancy_id, v.title, c.company_name, v.city,
+             v.salary, v.experience_years
+    HAVING matched_skills > 0
+    ORDER BY {SORT_OPTIONS[sort_by]}
+    LIMIT ?
+    """
+    params = (user_id, int(same_city), user_id,
+              min_salary, exp_limit, top_n)
+    df = pd.read_sql_query(query, conn, params=params)
+    df.columns = ["Вакансия", "Компания", "Қала", "Жалақы",
+                  "Тәжірибе (жыл)", "Қажетті дағдылар",
+                  "Сәйкес дағдылар", "Сәйкестік (%)"]
+    return df
+
+
+def missing_skills(user_id):
+    """Пайдаланушыда жетіспейтін дағдыларды вакансия бойынша көрсетеді
+    (тек пайдаланушыға ішінара сәйкес вакансиялар үшін)."""
+    query = """
+    SELECT
+        v.title AS "Вакансия",
+        s.skill_name AS "Жетіспейтін дағды",
+        vs.required_level AS "Қажетті деңгей"
+    FROM Vacancies v
+    JOIN Vacancy_Skills vs ON v.vacancy_id = vs.vacancy_id
+    JOIN Skills s ON s.skill_id = vs.skill_id
+    WHERE vs.skill_id NOT IN (
+        SELECT skill_id FROM User_Skills WHERE user_id = ?
+    )
+    AND v.vacancy_id IN (
+        SELECT vs2.vacancy_id
+        FROM Vacancy_Skills vs2
+        JOIN User_Skills us2 ON us2.skill_id = vs2.skill_id
+        WHERE us2.user_id = ?
+    )
+    ORDER BY v.title
+    """
+    return pd.read_sql_query(query, conn, params=(user_id, user_id))
+
+
+def matched_skills(user_id):
+    """Қандай дағдылар сәйкес келгенін көрсетеді (ұсыныстың себебі)."""
+    query = """
+    SELECT
+        v.title AS "Вакансия",
+        s.skill_name AS "Сәйкес дағды",
+        us.skill_level AS "Сіздің деңгейіңіз",
+        vs.required_level AS "Қажетті деңгей"
+    FROM Vacancies v
+    JOIN Vacancy_Skills vs ON v.vacancy_id = vs.vacancy_id
+    JOIN User_Skills us ON us.skill_id = vs.skill_id AND us.user_id = ?
+    JOIN Skills s ON s.skill_id = vs.skill_id
+    ORDER BY v.title
+    """
+    return pd.read_sql_query(query, conn, params=(user_id,))
+
+
+def user_name(user_id):
+    row = cursor.execute(
+        "SELECT full_name FROM Users WHERE user_id = ?", (user_id,)
+    ).fetchone()
+    return row[0] if row else None
+
+
+# =====================================================================
+# 5. ҰСЫНЫСТАРДЫ КӨРСЕТУ (мысалдар)
+# =====================================================================
+USER_ID = 1
+print("#" * 70)
+print(f"  {user_name(USER_ID)} үшін ұсыныстар")
+print("#" * 70, "\n")
+
+print("1) Сәйкестік бойынша (әдепкі):")
+print(recommend_vacancies(USER_ID).to_string(index=False), "\n")
+
+print("2) Жалақысы жоғарыдан төменге (жоғары жалақылар):")
+print(recommend_vacancies(USER_ID, sort_by="жалақы_жоғары")
+      .to_string(index=False), "\n")
+
+print("3) Жалақысы төменнен жоғарыға:")
+print(recommend_vacancies(USER_ID, sort_by="жалақы_төмен")
+      .to_string(index=False), "\n")
+
+print("4) Тәжірибе талабы аз вакансиялар бірінші:")
+print(recommend_vacancies(USER_ID, sort_by="тәжірибе_аз")
+      .to_string(index=False), "\n")
+
+print("5) Тек өз қаласында, жалақы 400 000-нан жоғары:")
+print(recommend_vacancies(USER_ID, sort_by="жалақы_жоғары",
+                          same_city=True, min_salary=400000)
+      .to_string(index=False), "\n")
+
+print("6) Тәжірибе талабы 1 жылдан аспайтын вакансиялар:")
+print(recommend_vacancies(USER_ID, max_experience=1)
+      .to_string(index=False), "\n")
+
+print("7) Сәйкес дағдылар (ұсыныс себебі):")
+print(matched_skills(USER_ID).to_string(index=False), "\n")
+
+print("8) Жетіспейтін дағдылар:")
+print(missing_skills(USER_ID).to_string(index=False), "\n")
+
+
+# =====================================================================
+# 6. ИНТЕРАКТИВТІ МӘЗІР (қаласаңыз, төмендегі жолды ашыңыз)
+# =====================================================================
+def menu():
+    keys = list(SORT_OPTIONS)
+    while True:
+        print("\n--- ВАКАНСИЯ ҰСЫНУ ЖҮЙЕСІ ---")
+        for u in cursor.execute(
+                "SELECT user_id, full_name, city FROM Users").fetchall():
+            print(f"  {u[0]}. {u[1]} ({u[2]})")
+        raw = input("Пайдаланушы ID (шығу үшін 0): ").strip()
+        if raw == "0":
+            break
+        if not raw.isdigit() or user_name(int(raw)) is None:
+            print("Мұндай пайдаланушы жоқ.")
+            continue
+        uid = int(raw)
+
+        print("\nСұрыптау түрі:")
+        for i, k in enumerate(keys, 1):
+            print(f"  {i}. {k}")
+        s = input("Нөмірін таңдаңыз (Enter = сәйкестік): ").strip()
+        sort_by = keys[int(s) - 1] if s.isdigit() and 1 <= int(s) <= len(keys) \
+            else "сәйкестік"
+
+        city = input("Тек өз қаласында ма? (иә/жоқ): ").strip().lower() == "иә"
+        ms = input("Ең төменгі жалақы (Enter = 0): ").strip()
+        min_salary = int(ms) if ms.isdigit() else 0
+
+        print(f"\n{user_name(uid)} үшін нәтиже:")
+        df = recommend_vacancies(uid, sort_by, city, min_salary, top_n=10)
+        print(df.to_string(index=False) if not df.empty
+              else "Сәйкес вакансия табылмады.")
+
+
+# menu()   # <- интерактивті режимді қосу үшін алдындағы # белгісін алып тастаңыз
+
+conn.close()
